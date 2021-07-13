@@ -1,3 +1,5 @@
+SHELL := bash
+
 XDG_CONFIG_HOME ?= $(HOME)/.config
 
 .PHONY: install
@@ -19,6 +21,11 @@ update: update-pathogen update-plugins ## Updates pathogen and all plugins.
 update-plugins: ## Updates all plugins.
 	git submodule update --init --recursive
 	git submodule update --remote
+	@if [[ -d "$(CURDIR)/bundle/coc.vim" ]]; then \
+		cd $(CURDIR)/bundle/coc.nvim; \
+		git checkout release; \
+		git reset --hard origin/release; \
+	fi
 	git submodule foreach 'git pull --recurse-submodules origin `git rev-parse --abbrev-ref HEAD`'
 
 .PHONY: update-pathogen
@@ -27,7 +34,7 @@ update-pathogen: ## Updates pathogen.
 
 .PHONY: README.md
 README.md: ## Generates and updates plugin info in README.md.
-	@sed -i '/Dockerfile/q' $@
+	@sed -i '/## Plugins Used/q' $@
 	@git  submodule --quiet foreach bash -c "echo -e \"* [\$$(git config --get remote.origin.url | sed 's#https://##' | sed 's#git://##' | sed 's/.git//')](\$$(git config --get remote.origin.url))\"" >> $@
 
 check_defined = \

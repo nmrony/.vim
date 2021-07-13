@@ -5,7 +5,11 @@ call pathogen#helptags()
 set nocompatible              " be iMproved, required
 filetype off                  " required
 
-filetype plugin indent on     " required
+" Enable file type detection.
+" Use the default filetype settings, so that mail gets 'tw' set to 72,
+" 'cindent' is on in C files, etc.
+" Also load indent files, to automatically do language-dependent indenting.
+filetype plugin indent on
 
 "
 " Settings
@@ -14,7 +18,6 @@ set noerrorbells                " No beeps
 set number                      " Show line numbers
 set backspace=indent,eol,start  " Makes backspace key more powerful.
 set showcmd                     " Show me what I'm typing
-set showmode                    " Show current mode.
 
 set noswapfile                  " Don't use swapfile
 set nobackup					          " Don't create annoying backup files
@@ -32,7 +35,6 @@ au FocusLost * :wa              " Set vim to save the file on focus out.
 
 set fileformats=unix,dos,mac    " Prefer Unix over Windows over OS 9 formats
 
-set noshowmatch                 " Do not show matching brackets by flickering
 set noshowmode                  " We show the mode with airline or lightline
 set incsearch                   " Shows the match while typing
 set hlsearch                    " Highlight found searches
@@ -59,21 +61,19 @@ autocmd FileType help wincmd L
 
 " Make Vim to handle long lines nicely.
 set wrap
-set textwidth=79
+set textwidth=80
 set formatoptions=qrn1
-"set colorcolumn=79
-"set relativenumber
-"set norelativenumber
 
-" mail line wrapping
-au BufRead /tmp/mutt-* set tw=72
+" Do not use relative numbers to where the cursor is.
+set norelativenumber
 
+" Apply the indentation of the current line to the next line.
 set autoindent
+set smartindent
 set complete-=i
 set showmatch
 set smarttab
 
-set et
 set tabstop=4
 set shiftwidth=4
 set expandtab
@@ -130,40 +130,19 @@ endif
 " file it was loaded from, thus the changes you made.
 " Only define it when not defined already.
 if !exists(":DiffOrig")
-	command DiffOrig vert new | set bt=nofile | r # | 0d_ | diffthis
-				\ | wincmd p | diffthis
+  command DiffOrig vert new | set bt=nofile | r # | 0d_ | diffthis
+        \ | wincmd p | diffthis
 endif
 
-" Only do this part when compiled with support for autocommands.
-if has("autocmd")
-
-  " Enable file type detection.
-  " Use the default filetype settings, so that mail gets 'tw' set to 72,
-  " 'cindent' is on in C files, etc.
-  " Also load indent files, to automatically do language-dependent indenting.
-  filetype plugin indent on
-
-  " Put these in an autocmd group, so that we can delete them easily.
-  augroup vimrcEx
-    au!
-
-    " For all text files set 'textwidth' to 78 characters.
-    autocmd FileType text setlocal textwidth=78
-
-    " When editing a file, always jump to the last known cursor position.
-    " Don't do it when the position is invalid or when inside an event handler
-    " (happens when dropping a file on gvim).
-    " Also don't do it when the mark is in the first line, that is the default
-    " position when opening a file.
-    autocmd BufReadPost *
-          \ if line("'\"") > 1 && line("'\"") <= line("$") |
-          \	exe "normal! g`\"" |
-          \ endif
-
-  augroup END
-else
-endif " has("autocmd")
-
+" When editing a file, always jump to the last known cursor position.
+" Don't do it when the position is invalid or when inside an event handler
+" (happens when dropping a file on gvim).
+" Also don't do it when the mark is in the first line, that is the default
+" position when opening a file.
+autocmd BufReadPost *
+      \ if line("'\"") > 1 && line("'\"") <= line("$") |
+      \	exe "normal! g`\"" |
+      \ endif
 
 syntax enable
 if has('gui_running')
@@ -239,6 +218,25 @@ nnoremap <leader>a :cclose<CR>
 " Remove search highlight
 nnoremap <leader><space> :nohlsearch<CR>
 
+function! InsertDate()
+  " Get the position of the cursor, if it is the start of the file we want
+  " a different behavior than if it is elsewhere.
+  let cursor_pos = getpos(".")
+  let now = trim(system('date'))
+  if cursor_pos[1] == "1"
+    if cursor_pos[2] == "1"
+      call append(0, [now, "", "- "])
+      call cursor(cursor_pos[1]+2, 2)
+    endif
+  else
+    call append(cursor_pos[1], ["", now, "", "- "])
+    call cursor(cursor_pos[1]+4, 2)
+  endif
+endfunction
+
+" Add a date timestamp between two new lines.
+nnoremap <leader>d :call InsertDate()<CR>
+
 " Buffer prev/next
 nnoremap <C-x> :bnext<CR>
 nnoremap <C-z> :bprev<CR>
@@ -283,7 +281,7 @@ nnoremap Y y$
 " Do not show stupid q: window
 map q: :q
 
-" sometimes this happens and I hate it
+" Sometimes this happens and I hate it
 map :Vs :vs
 map :Sp :sp
 
@@ -305,7 +303,7 @@ function! XTermPasteBegin()
   return ""
 endfunction
 
-" set 80 character line limit
+" Set 80 character line limit
 if exists('+colorcolumn')
   set colorcolumn=80
 else
@@ -332,15 +330,15 @@ augroup END
 
 au FileType nginx setlocal noet ts=4 sw=4 sts=4
 
+" mutt mail line wrapping
+au BufRead /tmp/mutt-* set textwidth=80
+
 " Go settings
 au BufNewFile,BufRead *.go setlocal noet ts=4 sw=4 sts=4
 " autocmd BufEnter *.go colorscheme nofrils-dark
 
 " scala settings
 autocmd BufNewFile,BufReadPost *.scala setl shiftwidth=2 expandtab
-
-" Markdown Settings
-autocmd BufNewFile,BufReadPost *.md setl ts=4 sw=4 sts=4 expandtab
 
 " lua settings
 autocmd BufNewFile,BufRead *.lua setlocal noet ts=4 sw=4 sts=4
@@ -355,14 +353,23 @@ autocmd FileType gitconfig,sh,toml set noexpandtab
 " python indent
 autocmd BufNewFile,BufRead *.py setlocal tabstop=4 softtabstop=4 shiftwidth=4 textwidth=80 smarttab expandtab
 
+" For all text files set 'textwidth' to 80 characters.
+autocmd FileType text setlocal textwidth=80 fo+=2t ts=2 sw=2 sts=2 expandtab
+autocmd BufNewFile,BufRead *.md,*.txt,*.adoc setlocal textwidth=80 fo+=2t ts=2 sw=2 sts=2 expandtab
+
 " toml settings
-au BufRead,BufNewFile MAINTAINERS set ft=toml
+au BufRead,BufNewFile MAINTAINERS,*.toml set ft=toml formatprg=toml-fmt
+
+au BufRead,BufNewFile Fastfile,Appfile,Podfile set ft=ruby
 
 " hcl settings
 au BufRead,BufNewFile *.workflow set ft=hcl
 
 " mips settings
 au BufRead,BufNewFile *.mips set ft=mips
+
+" settings for njk
+au BufRead,BufNewFile *.njk,*.hbs set ft=html
 
 " Binary settings: edit binary using xxd-format
 augroup Binary
@@ -419,6 +426,8 @@ let g:ctrlp_cache_dir = $HOME.'/.cache/ctrlp'
 let g:ctrlp_user_command = ['.git', 'cd %s && git ls-files -co --exclude-standard']
 
 let g:ctrlp_buftag_types = {'go' : '--language-force=go --golang-types=ftv'}
+
+let g:ctrlp_custom_ignore = '\v[\/](node_modules|target|dist)|(\.(swp|ico|git|svn))$'
 
 func! MyCtrlPTag()
   let g:ctrlp_prompt_mappings = {
@@ -593,5 +602,35 @@ let g:rust_clip_command = 'xclip -selection clipboard'
 
 " Run terraform fmt on save.
 let g:terraform_fmt_on_save=1
+
+" =================== coc.nvim ========================
+
+" Give more space for displaying messages.
+set cmdheight=2
+
+" Having longer updatetime (default is 4000 ms = 4 s) leads to noticeable
+" delays and poor user experience.
+set updatetime=300
+
+" Don't pass messages to |ins-completion-menu|.
+set shortmess+=c
+
+" Always show the signcolumn, otherwise it would shift the text each time
+" diagnostics appear/become resolved.
+set signcolumn=yes
+
+" Use tab for trigger completion with characters ahead and navigate.
+" NOTE: Use command ':verbose imap <tab>' to make sure tab is not mapped by
+" other plugin before putting this into your config.
+inoremap <silent><expr> <TAB>
+      \ pumvisible() ? "\<C-n>" :
+      \ <SID>check_back_space() ? "\<TAB>" :
+      \ coc#refresh()
+inoremap <expr><S-TAB> pumvisible() ? "\<C-p>" : "\<C-h>"
+
+function! s:check_back_space() abort
+  let col = col('.') - 1
+  return !col || getline('.')[col - 1]  =~# '\s'
+endfunction
 
 " vim:ts=2:sw=2:et
